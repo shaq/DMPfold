@@ -8,6 +8,7 @@ from __future__ import print_function
 import sys
 import os
 import time
+import datetime
 import random
 
 from math import sqrt,atan2
@@ -24,6 +25,9 @@ from nndef_sincostor_maxoutresnet import ResNet
 from nndef_errtor_maxoutresnet import ResNet as ErrNet
 
 # ############################## Main program ################################
+
+TIMESTAMP = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+SAVE_LOC = os.path.expanduser(f'~/Documents/disso/tors-ang-{TIMESTAMP}')
 
 def main():#
     device = torch.device("cpu")
@@ -42,13 +46,14 @@ def main():#
     mapdata = np.fromfile(sys.argv[2], dtype=np.float32)
 
     inputs = torch.from_numpy(np.concatenate((mapdata.reshape(1,60,length,length), inputs), axis=1)).type(torch.FloatTensor)
-    
+    output = np.zeros((3, length))
+
     network.eval()
     with torch.no_grad():
         result = network(inputs)
         prederr = torch.clamp(network2(inputs).data * 180.0, 1.0, 180.0) 
 
-        print("! DMPtorsions VFORMAT (DMPtorsions V0.2)")
+        # print("! DMPtorsions VFORMAT (DMPtorsions V0.2)")
 
         for wi in range(0, length):
             sin_phi, sin_psi, sin_omega, cos_phi, cos_psi, cos_omega = result[0, :, wi]
@@ -56,14 +61,17 @@ def main():#
             psi = atan2(sin_psi, cos_psi) * 180.0 / np.pi
             omega = atan2(sin_omega, cos_omega) * 180.0 / np.pi
             err_phi, err_psi, err_omega = prederr[0, :, wi]
-            #print("%4d %7.2f %7.2f %7.2f %7.2f %7.2f %7.2f" % (wi+1, phi, err_phi, psi, err_psi, omega, err_omega))
-            if wi > 0:
-                print("assign (resid {} and name c) (resid {} and name n) (resid {} and name ca) (resid {} and name c) 1.0 {:.2f} {:.2f} 2  ! phi".format(wi, wi+1, wi+1, wi+1, phi, err_phi))
-            if wi < length-1:
-                print("assign (resid {} and name n) (resid {} and name ca) (resid {} and name c) (resid {} and name n) 1.0 {:.2f} {:.2f} 2  ! psi".format(wi+1, wi+1, wi+1, wi+2, psi, err_psi))
-                # To our knowledge the below line is never actually called
-                if abs(omega) < 10.0:
-                    print("assign (resid {} and name ca) (resid {} and name c) (resid {} and name n) (resid {} and name ca) 1.0 {:.2f} {:.2f} 2  ! omega".format(wi+1, wi+1, wi+2, wi+2, omega, err_omega))
-                    
+            # print("%4d %7.2f %7.2f %7.2f %7.2f %7.2f %7.2f" % (wi+1, phi, err_phi, psi, err_psi, omega, err_omega))
+            output[:, wi] = phi, psi, omega
+            # if wi > 0:
+            #     print("assign (resid {} and name c) (resid {} and name n) (resid {} and name ca) (resid {} and name c) 1.0 {:.2f} {:.2f} 2  ! phi".format(wi, wi+1, wi+1, wi+1, phi, err_phi))
+            # if wi < length-1:
+            #     print("assign (resid {} and name n) (resid {} and name ca) (resid {} and name c) (resid {} and name n) 1.0 {:.2f} {:.2f} 2  ! psi".format(wi+1, wi+1, wi+1, wi+2, psi, err_psi))
+            #     # To our knowledge the below line is never actually called
+            #     if abs(omega) < 10.0:
+            #         print("assign (resid {} and name ca) (resid {} and name c) (resid {} and name n) (resid {} and name ca) 1.0 {:.2f} {:.2f} 2  ! omega".format(wi+1, wi+1, wi+2, wi+2, omega, err_omega))
+
+        np.save(SAVE_LOC, output)
+
 if __name__=="__main__":
     main()
