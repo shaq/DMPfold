@@ -72,6 +72,6 @@ class ResNet(nn.Module):
         lstm_out, hidden = self.lstm(x)
         x = lstm_out[[-1],:,:].permute(0,2,1)
         x = self.outlayer(x)
-        out = torch.cat((torch.sin(x), torch.cos(x)), dim=1)
+        # out = torch.cat((torch.sin(x), torch.cos(x)), dim=1)
 
-        return out
+        return x
